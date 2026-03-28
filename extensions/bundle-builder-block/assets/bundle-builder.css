@@ -10,7 +10,7 @@
   --bb-border: #e1e3e5;
   --bb-border-selected: var(--bb-primary);
   --bb-radius: 8px;
-  --bb-columns: 3;
+  --bb-columns: 2;
 }
 
 /* ── Container ─────────────────────────────────────────────────────────── */
@@ -89,13 +89,7 @@
 .bb-grid {
   display: grid;
   grid-template-columns: repeat(var(--bb-columns), 1fr);
-  gap: 0.75rem;
-}
-
-@media (max-width: 768px) {
-  .bb-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  gap: 0.5rem;
 }
 
 @media (max-width: 480px) {
@@ -109,13 +103,15 @@
 .bb-option {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   border: 2px solid var(--bb-border);
   border-radius: var(--bb-radius);
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
   background: #fff;
+  min-height: 64px;
 }
 
 .bb-option:hover:not(.bb-option--disabled) {
@@ -135,8 +131,9 @@
 /* ── Option Image ──────────────────────────────────────────────────────── */
 
 .bb-option__image {
-  width: 100%;
-  aspect-ratio: 1;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
   overflow: hidden;
   background: #f6f6f7;
 }
@@ -156,19 +153,21 @@
 
 .bb-option__image--placeholder::after {
   content: "";
-  width: 48px;
-  height: 48px;
+  width: 24px;
+  height: 24px;
   background: var(--bb-border);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 /* ── Option Info ───────────────────────────────────────────────────────── */
 
 .bb-option__info {
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.625rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .bb-option__name {
@@ -182,16 +181,11 @@
 
 .bb-option__badge {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
-  padding: 0.125rem 0.375rem;
-  border-radius: 4px;
+  padding: 0.0625rem 0.25rem;
+  border-radius: 3px;
   width: fit-content;
-}
-
-.bb-option__badge--low {
-  background: #fef3cd;
-  color: var(--bb-warning);
 }
 
 .bb-option__badge--out {
@@ -203,17 +197,18 @@
 
 .bb-option__check {
   position: absolute;
-  top: 0.5rem;
+  top: 50%;
   right: 0.5rem;
-  width: 24px;
-  height: 24px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
   background: var(--bb-primary);
   color: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
 }
 
@@ -222,19 +217,19 @@
 .bb-option__controls {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border-top: 1px solid var(--bb-border);
+  gap: 0.375rem;
+  padding: 0 0.5rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .bb-option__btn {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--bb-border);
   border-radius: 50%;
   background: #fff;
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -256,9 +251,9 @@
 }
 
 .bb-option__qty {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  min-width: 1.5em;
+  min-width: 1.25em;
   text-align: center;
   color: var(--bb-text);
 }
