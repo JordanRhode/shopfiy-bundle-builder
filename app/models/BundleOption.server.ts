@@ -1,60 +1,7 @@
 import prisma from "../db.server";
 
 /**
- * Atomically decrement inventory for a single option.
- * Uses WHERE inventory >= quantity to prevent going negative.
- * Returns the number of rows affected (0 = insufficient stock).
- */
-export async function decrementInventory(
-  optionId: string,
-  quantity: number
-): Promise<boolean> {
-  const result = await prisma.$executeRaw`
-    UPDATE BundleOption
-    SET inventory = inventory - ${quantity},
-        updatedAt = datetime('now')
-    WHERE id = ${optionId}
-      AND inventory >= ${quantity}
-      AND active = 1
-  `;
-  return result > 0;
-}
-
-/**
- * Atomically decrement inventory for multiple options in a single transaction.
- * If any single decrement fails, the entire transaction is rolled back.
- */
-export async function decrementMultiple(
-  items: { optionId: string; quantity: number }[]
-): Promise<{ success: boolean; failedOptionId?: string }> {
-  try {
-    await prisma.$transaction(async (tx) => {
-      for (const item of items) {
-        const result = await tx.$executeRaw`
-          UPDATE BundleOption
-          SET inventory = inventory - ${item.quantity},
-              updatedAt = datetime('now')
-          WHERE id = ${item.optionId}
-            AND inventory >= ${item.quantity}
-            AND active = 1
-        `;
-        if (result === 0) {
-          throw new Error(`INSUFFICIENT_STOCK:${item.optionId}`);
-        }
-      }
-    });
-    return { success: true };
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith("INSUFFICIENT_STOCK:")) {
-      const failedOptionId = error.message.split(":")[1];
-      return { success: false, failedOptionId };
-    }
-    throw error;
-  }
-}
-
-/**
- * Get all active options for a bundle with current inventory.
+ * Get all active options for a bundle.
  */
 export async function getAvailableOptions(bundleId: string) {
   return prisma.bundleOption.findMany({
@@ -66,7 +13,7 @@ export async function getAvailableOptions(bundleId: string) {
       id: true,
       name: true,
       imageUrl: true,
-      inventory: true,
+      inStock: true,
       sortOrder: true,
     },
     orderBy: { sortOrder: "asc" },
@@ -75,7 +22,7 @@ export async function getAvailableOptions(bundleId: string) {
 
 /**
  * Validate that selections are valid for a bundle.
- * Checks: option existence, active status, and inventory availability.
+ * Checks: option existence, active status, and in-stock status.
  */
 export async function validateSelections(
   bundleId: string,
@@ -102,10 +49,8 @@ export async function validateSelections(
       errors.push(`${option.name} is no longer available`);
       continue;
     }
-    if (option.inventory < selection.quantity) {
-      errors.push(
-        `${option.name} only has ${option.inventory} in stock (requested ${selection.quantity})`
-      );
+    if (!option.inStock) {
+      errors.push(`${option.name} is out of stock`);
     }
   }
 

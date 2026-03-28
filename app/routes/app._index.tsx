@@ -94,11 +94,8 @@ export default function BundleListPage() {
   const resourceName = { singular: "bundle", plural: "bundles" };
 
   const rowMarkup = bundles.map((bundle, index) => {
-    const lowInventoryOptions = bundle.options.filter(
-      (opt) => opt.inventory <= 5 && opt.inventory > 0
-    );
     const outOfStockOptions = bundle.options.filter(
-      (opt) => opt.inventory === 0
+      (opt) => !opt.inStock
     );
 
     return (
@@ -131,11 +128,6 @@ export default function BundleListPage() {
             {outOfStockOptions.length > 0 && (
               <Badge tone="critical">
                 {outOfStockOptions.length} out of stock
-              </Badge>
-            )}
-            {lowInventoryOptions.length > 0 && (
-              <Badge tone="warning">
-                {lowInventoryOptions.length} low stock
               </Badge>
             )}
           </BlockStack>

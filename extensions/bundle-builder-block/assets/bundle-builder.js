@@ -142,7 +142,7 @@
     const currentQty = state.selections[optionId] || 0;
 
     if (!state.allowMultiples && currentQty >= 1) return;
-    if (currentQty >= option.inventory) return;
+    if (!option.inStock) return;
 
     state.selections[optionId] = currentQty + 1;
     state.totalSelected++;
@@ -379,11 +379,8 @@
   function renderOption(option) {
     const qty = state.selections[option.id] || 0;
     const isSelected = qty > 0;
-    const isOutOfStock = option.inventory === 0;
-    const isAtMax =
-      !state.allowMultiples
-        ? qty >= 1
-        : qty >= option.inventory;
+    const isOutOfStock = !option.inStock;
+    const isAtMax = !state.allowMultiples && qty >= 1;
     const canIncrement =
       !isOutOfStock &&
       state.totalSelected < state.requiredCount &&
@@ -393,12 +390,9 @@
     if (isSelected) classes += " bb-option--selected";
     if (isOutOfStock) classes += " bb-option--disabled";
 
-    const inventoryBadge =
-      isOutOfStock
-        ? `<span class="bb-option__badge bb-option__badge--out">Sold out</span>`
-        : option.inventory <= 5
-        ? `<span class="bb-option__badge bb-option__badge--low">Only ${option.inventory} left</span>`
-        : "";
+    const inventoryBadge = isOutOfStock
+      ? `<span class="bb-option__badge bb-option__badge--out">Sold out</span>`
+      : "";
 
     if (!state.allowMultiples) {
       // Toggle mode — click to select/deselect

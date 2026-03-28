@@ -61,7 +61,7 @@ model BundleOption {
   bundleId  String
   name      String
   imageUrl  String?
-  inventory Int      @default(0)
+  inStock   Boolean  @default(true)
   sortOrder Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())

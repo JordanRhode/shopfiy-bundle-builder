@@ -80,10 +80,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       errors.options = "All options must have a name";
       break;
     }
-    if (opt.inventory < 0) {
-      errors.options = "Inventory cannot be negative";
-      break;
-    }
   }
 
   if (Object.keys(errors).length > 0) {
@@ -105,7 +101,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       options: options.map((opt: any, i: number) => ({
         name: opt.name,
         imageUrl: opt.imageUrl || null,
-        inventory: opt.inventory,
+        inStock: opt.inStock !== false,
         sortOrder: i,
       })),
     });
@@ -121,7 +117,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       options: options.map((opt: any, i: number) => ({
         name: opt.name,
         imageUrl: opt.imageUrl || null,
-        inventory: opt.inventory,
+        inStock: opt.inStock !== false,
         sortOrder: i,
         active: opt.active !== false,
       })),
@@ -149,7 +145,7 @@ export default function BundleEditPage() {
               options: bundle.options.map((opt) => ({
                 name: opt.name,
                 imageUrl: opt.imageUrl || "",
-                inventory: opt.inventory,
+                inStock: opt.inStock,
                 sortOrder: opt.sortOrder,
                 active: opt.active,
               })),

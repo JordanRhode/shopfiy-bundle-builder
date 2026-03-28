@@ -41,7 +41,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         id: opt.id,
         name: opt.name,
         imageUrl: opt.imageUrl,
-        inventory: opt.inventory,
+        inStock: opt.inStock,
         sortOrder: opt.sortOrder,
       })),
     },

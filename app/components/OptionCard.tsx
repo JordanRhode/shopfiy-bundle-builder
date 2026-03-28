@@ -2,6 +2,7 @@ import {
   Card,
   TextField,
   Button,
+  Checkbox,
   InlineStack,
   BlockStack,
   Text,
@@ -11,7 +12,7 @@ import { DeleteIcon, ArrowUpIcon, ArrowDownIcon } from "@shopify/polaris-icons";
 export interface OptionData {
   name: string;
   imageUrl: string;
-  inventory: number;
+  inStock: boolean;
   sortOrder: number;
   active: boolean;
 }
@@ -84,14 +85,11 @@ export default function OptionCard({
           helpText="Optional. URL to an image for this option."
         />
 
-        <TextField
-          label="Inventory"
-          type="number"
-          value={String(option.inventory)}
-          onChange={(value) => onChange(index, "inventory", Math.max(0, parseInt(value) || 0))}
-          autoComplete="off"
-          min={0}
-          helpText="Number of this option currently in stock"
+        <Checkbox
+          label="In stock"
+          checked={option.inStock}
+          onChange={(value) => onChange(index, "inStock", value)}
+          helpText="Uncheck to mark this flavor as out of stock"
         />
       </BlockStack>
     </Card>

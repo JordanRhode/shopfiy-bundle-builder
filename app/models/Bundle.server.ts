@@ -19,7 +19,7 @@ export interface CreateBundleInput {
   options: {
     name: string;
     imageUrl?: string;
-    inventory: number;
+    inStock: boolean;
     sortOrder: number;
   }[];
 }
@@ -36,7 +36,7 @@ export interface UpdateBundleInput {
   options?: {
     name: string;
     imageUrl?: string;
-    inventory: number;
+    inStock: boolean;
     sortOrder: number;
     active: boolean;
   }[];
