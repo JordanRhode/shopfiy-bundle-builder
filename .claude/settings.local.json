@@ -7,7 +7,10 @@
       "Bash(npm view:*)",
       "Bash(npm ls:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find /c/work/repos/shopfiy-bundle-builder -type f -name *.toml -o -name package.json -o -name tsconfig.json)",
+      "Bash(node -e \"import\\(''@shopify/shopify-api''\\).then\\(m => console.log\\(Object.keys\\(m\\).filter\\(k => k.includes\\(''API''\\) || k.includes\\(''Version''\\) || k.includes\\(''version''\\)\\).join\\(''\\\\n''\\)\\)\\).catch\\(e => console.log\\(e.message\\)\\)\")",
+      "Bash(node -e \"import\\(''@shopify/shopify-api''\\).then\\(m => console.log\\(JSON.stringify\\(m.ApiVersion, null, 2\\)\\)\\).catch\\(e => console.log\\(e.message\\)\\)\")"
     ]
   }
 }

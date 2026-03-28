@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "774063b595578ff408ce1cc8f7a8b6f1"
+client_id = "87a0da91084723d37159e7cad6741b47"
 name = "Custom Bundle Builder"
 application_url = "https://shopify.dev/apps/default-app-home"
 embedded = true
@@ -12,10 +12,6 @@ include_config_on_deploy = true
 [webhooks]
 api_version = "2026-04"
 
-  [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks"
-
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_orders,read_products,write_products"
@@ -24,6 +20,6 @@ scopes = "read_orders,read_products,write_products"
 redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
 
 [app_proxy]
-url = "https://shopify.dev/apps/default-app-home/app-proxy"
+url = "https://localhost/app-proxy"
 subpath = "bundle-builder"
 prefix = "apps"

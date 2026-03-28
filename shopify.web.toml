@@ -1,0 +1,2 @@
+[commands]
+dev = "npx remix vite:dev"

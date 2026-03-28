@@ -15,8 +15,10 @@ if (
 export default defineConfig({
   server: {
     port: Number(process.env.PORT || 3000),
+    allowedHosts: true,
     hmr: {
-      protocol: "ws",
+      protocol: "wss",
+      clientPort: 443,
     },
   },
   plugins: [
