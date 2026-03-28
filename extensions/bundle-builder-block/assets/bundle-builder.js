@@ -231,9 +231,9 @@
           id: parseInt(state.selectedVariantId, 10),
           quantity: 1,
           properties: {
+            "Bundle Selections": selectionLabels,
             _bundle_id: state.bundle.id,
             _bundle_selections: JSON.stringify(state.selections),
-            "Bundle Selections": selectionLabels,
           },
         }),
       });
@@ -247,8 +247,37 @@
       state.totalSelected = 0;
       state.submitting = false;
 
-      // Trigger cart update event for the theme
-      document.dispatchEvent(new CustomEvent("cart:refresh"));
+      // Trigger cart update for the theme
+      try {
+        const cartRes2 = await fetch("/cart.js");
+        const cartData = await cartRes2.json();
+
+        // Horizon theme: dispatch CartUpdateEvent via dynamic import
+        try {
+          const { CartUpdateEvent } = await import("@theme/events");
+          const cartDrawer = document.querySelector("cart-drawer-component");
+          const event = new CartUpdateEvent(cartData, "manual-trigger", {
+            itemCount: cartData.item_count,
+            source: "bundle-builder",
+            sections: {},
+          });
+          document.dispatchEvent(event);
+          if (cartDrawer?.hasAttribute("auto-open")) {
+            cartDrawer.open();
+          }
+        } catch (_) {
+          // Not Horizon — try generic approaches
+          document.dispatchEvent(new CustomEvent("cart:refresh"));
+          document.dispatchEvent(
+            new CustomEvent("cart:update", {
+              bubbles: true,
+              detail: { data: { itemCount: cartData.item_count, source: "product-form-component" } },
+            })
+          );
+        }
+      } catch (_) {
+        // Fallback: cart will update on next navigation
+      }
 
       // Show brief success message then re-render
       showSuccessMessage();
