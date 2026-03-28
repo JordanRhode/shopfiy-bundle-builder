@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Card,
   TextField,
@@ -6,8 +7,16 @@ import {
   InlineStack,
   BlockStack,
   Text,
+  Badge,
+  Collapsible,
 } from "@shopify/polaris";
-import { DeleteIcon, ArrowUpIcon, ArrowDownIcon } from "@shopify/polaris-icons";
+import {
+  DeleteIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@shopify/polaris-icons";
 
 export interface OptionData {
   name: string;
@@ -36,14 +45,29 @@ export default function OptionCard({
   onMoveUp,
   onMoveDown,
 }: OptionCardProps) {
+  const [open, setOpen] = useState(!option.name);
+
   return (
     <Card>
       <BlockStack gap="300">
-        <InlineStack align="space-between" blockAlign="center">
-          <Text variant="headingSm" as="h3">
-            Option {index + 1}
-          </Text>
+        <InlineStack align="space-between" blockAlign="center" wrap={false}>
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <Button
+              icon={open ? ChevronUpIcon : ChevronDownIcon}
+              onClick={() => setOpen(!open)}
+              accessibilityLabel={open ? "Collapse" : "Expand"}
+              variant="plain"
+            >
+                {option.name || `Option ${index + 1}`}
+            </Button>
+            {!option.inStock && <Badge tone="critical">Out of stock</Badge>}
+          </InlineStack>
           <InlineStack gap="200">
+            <Checkbox
+              label="In stock"
+              checked={option.inStock}
+              onChange={(value) => onChange(index, "inStock", value)}
+            />
             <Button
               icon={ArrowUpIcon}
               disabled={index === 0}
@@ -68,29 +92,26 @@ export default function OptionCard({
           </InlineStack>
         </InlineStack>
 
-        <TextField
-          label="Name"
-          value={option.name}
-          onChange={(value) => onChange(index, "name", value)}
-          autoComplete="off"
-          placeholder="e.g. Dark Chocolate Truffle"
-        />
+        <Collapsible open={open} id={`option-${index}`}>
+          <BlockStack gap="300">
+            <TextField
+              label="Name"
+              value={option.name}
+              onChange={(value) => onChange(index, "name", value)}
+              autoComplete="off"
+              placeholder="e.g. Dark Chocolate Truffle"
+            />
 
-        <TextField
-          label="Image URL"
-          value={option.imageUrl}
-          onChange={(value) => onChange(index, "imageUrl", value)}
-          autoComplete="off"
-          placeholder="https://example.com/image.jpg"
-          helpText="Optional. URL to an image for this option."
-        />
-
-        <Checkbox
-          label="In stock"
-          checked={option.inStock}
-          onChange={(value) => onChange(index, "inStock", value)}
-          helpText="Uncheck to mark this flavor as out of stock"
-        />
+            <TextField
+              label="Image URL"
+              value={option.imageUrl}
+              onChange={(value) => onChange(index, "imageUrl", value)}
+              autoComplete="off"
+              placeholder="https://example.com/image.jpg"
+              helpText="Optional. URL to an image for this option."
+            />
+          </BlockStack>
+        </Collapsible>
       </BlockStack>
     </Card>
   );

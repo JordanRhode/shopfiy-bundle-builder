@@ -303,6 +303,7 @@ export default function BundleForm({ bundle, errors }: BundleFormProps) {
           </Box>
         </Layout.Section>
       </Layout>
+      <Box paddingBlockEnd="1600" />
     </Page>
   );
 }
