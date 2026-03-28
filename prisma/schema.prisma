@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.db"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model Bundle {
+  id               String             @id @default(cuid())
+  shopDomain       String
+  shopifyProductId String
+  title            String
+  allowMultiples   Boolean            @default(true)
+  active           Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  variantMaps      BundleVariantMap[]
+  options          BundleOption[]
+
+  @@unique([shopDomain, shopifyProductId])
+  @@index([shopDomain])
+}
+
+model BundleVariantMap {
+  id               String @id @default(cuid())
+  bundleId         String
+  shopifyVariantId String
+  variantTitle     String
+  selectionCount   Int
+
+  bundle           Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, shopifyVariantId])
+}
+
+model BundleOption {
+  id        String   @id @default(cuid())
+  bundleId  String
+  name      String
+  imageUrl  String?
+  inventory Int      @default(0)
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bundle    Bundle   @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@index([bundleId, active])
+}

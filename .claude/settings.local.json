@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/work/repos/shopfiy-bundle-builder log --oneline -5)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npm view:*)",
+      "Bash(npm ls:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

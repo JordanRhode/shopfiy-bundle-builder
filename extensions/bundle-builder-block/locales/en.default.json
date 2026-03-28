@@ -1,0 +1,9 @@
+{
+  "bundle_selector": {
+    "heading": "Build Your Bundle",
+    "select_variant": "Please select a size to start building your bundle.",
+    "sold_out": "Sold out",
+    "add_to_cart": "Add to Cart",
+    "added": "Added to cart!"
+  }
+}

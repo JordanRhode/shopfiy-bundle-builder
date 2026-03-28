@@ -1,0 +1,5 @@
+api_version = "2024-10"
+uid = "9cc1cc3b-0288-4513-b800-08bf52262335f289f976"
+type = "theme_app_extension"
+name = "Custom Bundle Builder"
+handle = "bundle-builder-block"
