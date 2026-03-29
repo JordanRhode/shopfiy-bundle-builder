@@ -100,6 +100,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       })),
       options: options.map((opt: any, i: number) => ({
         name: opt.name,
+        description: opt.description || null,
         imageUrl: opt.imageUrl || null,
         inStock: opt.inStock !== false,
         sortOrder: i,
@@ -116,6 +117,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       })),
       options: options.map((opt: any, i: number) => ({
         name: opt.name,
+        description: opt.description || null,
         imageUrl: opt.imageUrl || null,
         inStock: opt.inStock !== false,
         sortOrder: i,
@@ -144,6 +146,7 @@ export default function BundleEditPage() {
               variantMaps: bundle.variantMaps,
               options: bundle.options.map((opt) => ({
                 name: opt.name,
+                description: opt.description || "",
                 imageUrl: opt.imageUrl || "",
                 inStock: opt.inStock,
                 sortOrder: opt.sortOrder,

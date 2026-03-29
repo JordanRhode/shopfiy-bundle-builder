@@ -58,7 +58,7 @@ export default function BundleForm({ bundle, errors }: BundleFormProps) {
   );
   const [options, setOptions] = useState<OptionData[]>(
     bundle?.options || [
-      { name: "", imageUrl: "", inStock: true, sortOrder: 0, active: true },
+      { name: "", description: "", imageUrl: "", inStock: true, sortOrder: 0, active: true },
     ]
   );
 

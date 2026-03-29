@@ -40,6 +40,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       options: bundle.options.map((opt) => ({
         id: opt.id,
         name: opt.name,
+        description: opt.description,
         imageUrl: opt.imageUrl,
         inStock: opt.inStock,
         sortOrder: opt.sortOrder,

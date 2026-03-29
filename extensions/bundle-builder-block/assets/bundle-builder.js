@@ -394,10 +394,39 @@
       ? `<span class="bb-option__badge bb-option__badge--out">Sold out</span>`
       : "";
 
+    const hasDescription = option.description && option.description.trim();
+    const descriptionBtn = hasDescription
+      ? `<button class="bb-option__desc-toggle" data-action="toggle-desc" data-option-id="${option.id}" aria-expanded="false" aria-label="Show description">&#9432;</button>`
+      : "";
+    const descriptionPanel = hasDescription
+      ? `<div class="bb-option__desc" data-desc-id="${option.id}" hidden>${escapeHtml(option.description)}</div>`
+      : "";
+
     if (!state.allowMultiples) {
       // Toggle mode — click to select/deselect
       return `
-        <div class="${classes}" data-option-id="${option.id}" data-action="toggle">
+        <div class="${classes}" data-option-id="${option.id}">
+          <div class="bb-option__row" data-action="toggle" data-option-id="${option.id}">
+            ${
+              option.imageUrl
+                ? `<div class="bb-option__image"><img src="${escapeHtml(option.imageUrl)}" alt="${escapeHtml(option.name)}" loading="lazy" /></div>`
+                : `<div class="bb-option__image bb-option__image--placeholder"></div>`
+            }
+            <div class="bb-option__info">
+              <span class="bb-option__name">${escapeHtml(option.name)}</span>
+              ${inventoryBadge}
+            </div>
+            ${descriptionBtn}
+            ${isSelected ? `<div class="bb-option__check">&#10003;</div>` : ""}
+          </div>
+          ${descriptionPanel}
+        </div>`;
+    }
+
+    // Quantity mode — +/- buttons
+    return `
+      <div class="${classes}" data-option-id="${option.id}">
+        <div class="bb-option__row">
           ${
             option.imageUrl
               ? `<div class="bb-option__image"><img src="${escapeHtml(option.imageUrl)}" alt="${escapeHtml(option.name)}" loading="lazy" /></div>`
@@ -407,27 +436,14 @@
             <span class="bb-option__name">${escapeHtml(option.name)}</span>
             ${inventoryBadge}
           </div>
-          ${isSelected ? `<div class="bb-option__check">&#10003;</div>` : ""}
-        </div>`;
-    }
-
-    // Quantity mode — +/- buttons
-    return `
-      <div class="${classes}" data-option-id="${option.id}">
-        ${
-          option.imageUrl
-            ? `<div class="bb-option__image"><img src="${escapeHtml(option.imageUrl)}" alt="${escapeHtml(option.name)}" loading="lazy" /></div>`
-            : `<div class="bb-option__image bb-option__image--placeholder"></div>`
-        }
-        <div class="bb-option__info">
-          <span class="bb-option__name">${escapeHtml(option.name)}</span>
-          ${inventoryBadge}
-        </div>
-        <div class="bb-option__controls">
-          <button class="bb-option__btn bb-option__btn--minus" data-action="decrement" data-option-id="${option.id}" ${qty === 0 ? "disabled" : ""}>−</button>
-          <span class="bb-option__qty">${qty}</span>
+          ${descriptionBtn}
+          <div class="bb-option__controls">
+            <button class="bb-option__btn bb-option__btn--minus" data-action="decrement" data-option-id="${option.id}" ${qty === 0 ? "disabled" : ""}>−</button>
+            <span class="bb-option__qty">${qty}</span>
           <button class="bb-option__btn bb-option__btn--plus" data-action="increment" data-option-id="${option.id}" ${!canIncrement ? "disabled" : ""}>+</button>
         </div>
+        </div>
+        ${descriptionPanel}
       </div>`;
   }
 
@@ -435,9 +451,24 @@
     // Option toggle (single-select mode)
     container.querySelectorAll('[data-action="toggle"]').forEach((el) => {
       el.addEventListener("click", (e) => {
+        if (e.target.closest('[data-action="toggle-desc"]')) return;
         const optionId = el.dataset.optionId;
-        if (el.classList.contains("bb-option--disabled")) return;
+        if (el.closest(".bb-option--disabled")) return;
         toggleOption(optionId);
+      });
+    });
+
+    // Description accordion toggle
+    container.querySelectorAll('[data-action="toggle-desc"]').forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const optionId = btn.dataset.optionId;
+        const desc = container.querySelector(`[data-desc-id="${optionId}"]`);
+        if (desc) {
+          const isHidden = desc.hasAttribute("hidden");
+          desc.toggleAttribute("hidden");
+          btn.setAttribute("aria-expanded", String(isHidden));
+        }
       });
     });
 

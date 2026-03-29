@@ -20,6 +20,7 @@ import {
 
 export interface OptionData {
   name: string;
+  description: string;
   imageUrl: string;
   inStock: boolean;
   sortOrder: number;
@@ -100,6 +101,16 @@ export default function OptionCard({
               onChange={(value) => onChange(index, "name", value)}
               autoComplete="off"
               placeholder="e.g. Dark Chocolate Truffle"
+            />
+
+            <TextField
+              label="Description"
+              value={option.description}
+              onChange={(value) => onChange(index, "description", value)}
+              autoComplete="off"
+              multiline={4}
+              placeholder="Describe this flavor — ingredients, tasting notes, etc."
+              helpText="Optional. Shown when customers click on this option."
             />
 
             <TextField

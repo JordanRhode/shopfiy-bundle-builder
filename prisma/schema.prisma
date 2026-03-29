@@ -59,9 +59,10 @@ model BundleVariantMap {
 model BundleOption {
   id        String   @id @default(cuid())
   bundleId  String
-  name      String
-  imageUrl  String?
-  inStock   Boolean  @default(true)
+  name        String
+  description String?
+  imageUrl    String?
+  inStock     Boolean  @default(true)
   sortOrder Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
