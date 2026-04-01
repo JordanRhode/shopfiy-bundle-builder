@@ -73,6 +73,19 @@
     if (variantId) {
       setVariant(variantId);
     }
+
+    // Try to find selected variant from Dawn's variant-selects script tag
+    try {
+      const selectedVariantScript = document.querySelector('variant-selects script[data-selected-variant]');
+      if (selectedVariantScript) {
+        const variantData = JSON.parse(selectedVariantScript.textContent);
+        if (variantData?.id) {
+          setVariant(String(variantData.id));
+        }
+      }
+    } catch (_) {
+      // Invalid JSON — skip silently
+    }
   }
 
   function watchVariantChanges() {
