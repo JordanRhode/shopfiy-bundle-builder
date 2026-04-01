@@ -2,12 +2,11 @@
 
 client_id = "87a0da91084723d37159e7cad6741b47"
 name = "Custom Bundle Builder"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://attractive-heart-production-e8c8.up.railway.app"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2026-04"
@@ -17,9 +16,9 @@ api_version = "2026-04"
 scopes = "read_orders,read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [ "https://attractive-heart-production-e8c8.up.railway.app/api/auth" ]
 
 [app_proxy]
-url = "https://localhost/app-proxy"
+url = "https://attractive-heart-production-e8c8.up.railway.app/app-proxy"
 subpath = "bundle-builder"
 prefix = "apps"
