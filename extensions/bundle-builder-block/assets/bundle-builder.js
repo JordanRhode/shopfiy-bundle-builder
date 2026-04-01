@@ -370,10 +370,23 @@
         }
       </div>`;
 
+    // Capture focused element before re-render
+    const focused = document.activeElement;
+    const focusAction = focused?.dataset?.action;
+    const focusOptionId = focused?.dataset?.optionId;
+
     container.innerHTML = html;
 
     // Bind events
     bindEvents();
+
+    // Restore focus after re-render
+    if (focusAction && focusOptionId) {
+      const target = container.querySelector(
+        `[data-action="${focusAction}"][data-option-id="${focusOptionId}"]`
+      );
+      if (target) target.focus();
+    }
   }
 
   function renderOption(option) {
@@ -395,8 +408,8 @@
       : "";
 
     const hasDescription = option.description && option.description.trim();
-    const descriptionBtn = hasDescription
-      ? `<button class="bb-option__desc-toggle" data-action="toggle-desc" data-option-id="${option.id}" aria-expanded="false" aria-label="Show description">&#9432;</button>`
+    const caratIcon = hasDescription
+      ? `<span class="bb-option__carat" data-carat-id="${option.id}">&#9662;</span>`
       : "";
     const descriptionPanel = hasDescription
       ? `<div class="bb-option__desc" data-desc-id="${option.id}" hidden>${escapeHtml(option.description)}</div>`
@@ -407,16 +420,18 @@
       return `
         <div class="${classes}" data-option-id="${option.id}">
           <div class="bb-option__row" data-action="toggle" data-option-id="${option.id}">
-            ${
-              option.imageUrl
-                ? `<div class="bb-option__image"><img src="${escapeHtml(option.imageUrl)}" alt="${escapeHtml(option.name)}" loading="lazy" /></div>`
-                : `<div class="bb-option__image bb-option__image--placeholder"></div>`
-            }
-            <div class="bb-option__info">
-              <span class="bb-option__name">${escapeHtml(option.name)}</span>
-              ${inventoryBadge}
-            </div>
-            ${descriptionBtn}
+            <button type="button" class="bb-option__desc-trigger" ${hasDescription ? `data-action="toggle-desc" data-option-id="${option.id}" aria-expanded="false" aria-label="Show description for ${escapeHtml(option.name)}"` : `disabled`}>
+              ${
+                option.imageUrl
+                  ? `<div class="bb-option__image"><img src="${escapeHtml(option.imageUrl)}" alt="${escapeHtml(option.name)}" loading="lazy" /></div>`
+                  : `<div class="bb-option__image bb-option__image--placeholder"></div>`
+              }
+              <div class="bb-option__info">
+                <span class="bb-option__name">${escapeHtml(option.name)}</span>
+                ${inventoryBadge}
+              </div>
+              ${caratIcon}
+            </button>
             ${isSelected ? `<div class="bb-option__check">&#10003;</div>` : ""}
           </div>
           ${descriptionPanel}
@@ -427,20 +442,22 @@
     return `
       <div class="${classes}" data-option-id="${option.id}">
         <div class="bb-option__row">
-          ${
-            option.imageUrl
-              ? `<div class="bb-option__image"><img src="${escapeHtml(option.imageUrl)}" alt="${escapeHtml(option.name)}" loading="lazy" /></div>`
-              : `<div class="bb-option__image bb-option__image--placeholder"></div>`
-          }
-          <div class="bb-option__info">
-            <span class="bb-option__name">${escapeHtml(option.name)}</span>
-            ${inventoryBadge}
-          </div>
-          ${descriptionBtn}
+          <button type="button" class="bb-option__desc-trigger" ${hasDescription ? `data-action="toggle-desc" data-option-id="${option.id}" aria-expanded="false" aria-label="Show description for ${escapeHtml(option.name)}"` : `disabled`}>
+            ${
+              option.imageUrl
+                ? `<div class="bb-option__image"><img src="${escapeHtml(option.imageUrl)}" alt="${escapeHtml(option.name)}" loading="lazy" /></div>`
+                : `<div class="bb-option__image bb-option__image--placeholder"></div>`
+            }
+            <div class="bb-option__info">
+              <span class="bb-option__name">${escapeHtml(option.name)}</span>
+              ${inventoryBadge}
+            </div>
+            ${caratIcon}
+          </button>
           <div class="bb-option__controls">
-            <button class="bb-option__btn bb-option__btn--minus" data-action="decrement" data-option-id="${option.id}" ${qty === 0 ? "disabled" : ""}>−</button>
+            <button class="bb-option__btn bb-option__btn--minus" data-action="decrement" data-option-id="${option.id}" ${qty === 0 ? "disabled" : ""} aria-label="Remove one ${escapeHtml(option.name)}">−</button>
             <span class="bb-option__qty">${qty}</span>
-          <button class="bb-option__btn bb-option__btn--plus" data-action="increment" data-option-id="${option.id}" ${!canIncrement ? "disabled" : ""}>+</button>
+          <button class="bb-option__btn bb-option__btn--plus" data-action="increment" data-option-id="${option.id}" ${!canIncrement ? "disabled" : ""} aria-label="Add one ${escapeHtml(option.name)}">+</button>
         </div>
         </div>
         ${descriptionPanel}
@@ -459,15 +476,17 @@
     });
 
     // Description accordion toggle
-    container.querySelectorAll('[data-action="toggle-desc"]').forEach((btn) => {
-      btn.addEventListener("click", (e) => {
+    container.querySelectorAll('[data-action="toggle-desc"]').forEach((trigger) => {
+      trigger.addEventListener("click", (e) => {
         e.stopPropagation();
-        const optionId = btn.dataset.optionId;
+        const optionId = trigger.dataset.optionId;
         const desc = container.querySelector(`[data-desc-id="${optionId}"]`);
+        const carat = container.querySelector(`[data-carat-id="${optionId}"]`);
         if (desc) {
           const isHidden = desc.hasAttribute("hidden");
           desc.toggleAttribute("hidden");
-          btn.setAttribute("aria-expanded", String(isHidden));
+          trigger.setAttribute("aria-expanded", String(isHidden));
+          if (carat) carat.classList.toggle("bb-option__carat--open", isHidden);
         }
       });
     });

@@ -1,7 +1,7 @@
 /* ── Bundle Builder Styles ──────────────────────────────────────────────── */
 
 :root {
-  --bb-primary: #008060;
+  --bb-primary: #000000;
   --bb-primary-light: #e6f5f0;
   --bb-danger: #d72c0d;
   --bb-warning: #b98900;
@@ -198,29 +198,42 @@
   cursor: pointer;
 }
 
-/* ── Description Accordion ─────────────────────────────────────────────── */
+/* ── Description Trigger (image + info + carat) ──────────────────────── */
 
-.bb-option__desc-toggle {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 1.25rem;
-  color: var(--bb-text-subdued);
+button.bb-option__desc-trigger {
   display: flex;
   align-items: center;
-  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  cursor: pointer;
+  border: none;
+  background: none;
   padding: 0;
-  margin-right: 0.25rem;
-  border-radius: 50%;
-  transition: background 0.15s, color 0.15s;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
 }
 
-.bb-option__desc-toggle:hover {
-  background: var(--bb-primary-light);
+button.bb-option__desc-trigger:disabled {
+  cursor: default;
+}
+
+.bb-option__desc-trigger:hover .bb-option__carat {
   color: var(--bb-primary);
+}
+
+.bb-option__carat {
+  font-size: 1.8rem;
+  color: var(--bb-text-subdued);
+  margin-right: 0.5rem;
+  margin-left: auto;
+  transition: transform 0.2s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.bb-option__carat--open {
+  transform: rotate(180deg);
 }
 
 .bb-option__desc {
