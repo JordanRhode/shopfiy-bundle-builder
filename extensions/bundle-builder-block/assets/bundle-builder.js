@@ -65,12 +65,13 @@
       return;
     }
 
-    // Try to find selected variant from a <select> or radio on the page
+    // Try to find selected variant from a <select>, radio, or hidden input on the page
     const variantSelect = document.querySelector(
-      'select[name="id"], input[name="id"]:checked'
+      '.variant-picker__form input[type="radio"][checked]'
     );
-    if (variantSelect) {
-      setVariant(variantSelect.value);
+    const variantId = variantSelect?.getAttribute('data-variant-id');
+    if (variantId) {
+      setVariant(variantId);
     }
   }
 
@@ -252,21 +253,66 @@
         const cartRes2 = await fetch("/cart.js");
         const cartData = await cartRes2.json();
 
+        // Update the cart icon bubble count
+        const cartBubble = document.getElementById("cart-icon-bubble");
+        if (cartBubble) {
+          const countEl = cartBubble.querySelector(".cart-count-bubble span[aria-hidden]");
+          if (countEl) {
+            countEl.textContent = cartData.item_count;
+          } else if (cartData.item_count > 0) {
+            // Create the bubble if it doesn't exist yet
+            const bubble = document.createElement("div");
+            bubble.className = "cart-count-bubble";
+            bubble.innerHTML = `<span aria-hidden="true">${cartData.item_count}</span>`;
+            cartBubble.appendChild(bubble);
+          }
+        }
+
+        // Dawn cart-notification component
+        const cartNotification = document.querySelector("cart-notification");
+        if (cartNotification) {
+          // Fetch the updated cart-notification section HTML
+          const sectionId = cartNotification.closest(".shopify-section")?.id?.replace("shopify-section-", "");
+          if (sectionId) {
+            const sectionRes = await fetch(`/?sections=${sectionId}`);
+            const sectionData = await sectionRes.json();
+            if (sectionData[sectionId]) {
+              const temp = document.createElement("div");
+              temp.innerHTML = sectionData[sectionId];
+              const newContent = temp.querySelector("cart-notification");
+              if (newContent) {
+                cartNotification.innerHTML = newContent.innerHTML;
+              }
+            }
+          }
+          cartNotification.classList.add("animate", "active");
+          cartNotification.removeAttribute("hidden");
+          setTimeout(() => {
+            cartNotification.classList.remove("animate", "active");
+          }, 5000);
+        }
+
+        // Dawn cart-drawer component
+        const cartDrawer = document.querySelector("cart-drawer");
+        if (cartDrawer && typeof cartDrawer.open === "function") {
+          cartDrawer.open();
+        }
+
         // Horizon theme: dispatch CartUpdateEvent via dynamic import
         try {
           const { CartUpdateEvent } = await import("@theme/events");
-          const cartDrawer = document.querySelector("cart-drawer-component");
+          const horizonDrawer = document.querySelector("cart-drawer-component");
           const event = new CartUpdateEvent(cartData, "manual-trigger", {
             itemCount: cartData.item_count,
             source: "bundle-builder",
             sections: {},
           });
           document.dispatchEvent(event);
-          if (cartDrawer?.hasAttribute("auto-open")) {
-            cartDrawer.open();
+          if (horizonDrawer?.hasAttribute("auto-open")) {
+            horizonDrawer.open();
           }
         } catch (_) {
-          // Not Horizon — try generic approaches
+          // Not Horizon — try generic events
           document.dispatchEvent(new CustomEvent("cart:refresh"));
           document.dispatchEvent(
             new CustomEvent("cart:update", {
