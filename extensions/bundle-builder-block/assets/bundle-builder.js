@@ -6,6 +6,7 @@
 
   const productId = container.dataset.productId;
   const proxyBase = container.dataset.proxyBase || "/apps/bundle-builder";
+  const heading = container.dataset.heading || "Build Your Bundle";
 
   // ── State ──────────────────────────────────────────────────────────────
 
@@ -392,7 +393,7 @@
         ${state.error ? `<div class="bb-error"><p>${escapeHtml(state.error)}</p></div>` : ""}
 
         <div class="bb-header">
-          <h2 class="bb-heading">Build Your Bundle</h2>
+          <h2 class="bb-heading">${escapeHtml(heading)}</h2>
           ${
             state.selectedVariantId
               ? `<div class="bb-counter ${isComplete ? "bb-counter--complete" : ""}">
