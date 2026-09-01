@@ -1,7 +1,6 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { deleteBundlesForShop } from "../models/Bundle.server";
-import { deletePackagingForShop } from "../models/Packaging.server";
+import { markUninstalled } from "../models/Shop.server";
 import {
   deductForOrder,
   restockForRefund,
@@ -13,10 +12,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { topic, shop, payload } = await authenticate.webhook(request);
 
   switch (topic) {
+    // Deliberately non-destructive. Bundle configuration and packaging counts
+    // survive an uninstall so a reinstall resumes where the merchant left off;
+    // packaging counts in particular track physical stock that cannot be
+    // recovered by reinstalling. Permanent deletion is a manual act via
+    // purgeShopData.
     case "APP_UNINSTALLED":
-      console.log(`App uninstalled from ${shop}, cleaning up data...`);
-      await deleteBundlesForShop(shop);
-      await deletePackagingForShop(shop);
+      console.log(`App uninstalled from ${shop}; data retained for reinstall`);
+      await markUninstalled(shop);
       break;
 
     // Deducting on paid rather than created keeps unpaid draft and abandoned

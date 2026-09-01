@@ -134,3 +134,13 @@ model PackagingLedgerEntry {
   @@index([shopDomain, createdAt])
   @@index([shopifyOrderId])
 }
+
+/// Tracks install state per shop so uninstalling can be recorded without
+/// destroying the merchant's data. Reinstalling clears uninstalledAt and the
+/// shop picks up exactly where it left off.
+model Shop {
+  shopDomain    String    @id
+  installedAt   DateTime  @default(now())
+  uninstalledAt DateTime?
+  updatedAt     DateTime  @updatedAt
+}
