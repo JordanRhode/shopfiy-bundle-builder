@@ -7,6 +7,14 @@ import type { PackagingType } from "@prisma/client";
  */
 const COOLDOWN_HOURS = Number(process.env.PACKAGING_ALERT_COOLDOWN_HOURS ?? 12);
 
+/**
+ * Alerts are sent inline from the webhook handler, and Shopify expects a
+ * response within 5 seconds — it retries on timeout and eventually removes a
+ * subscription that keeps failing. Cap each provider call well inside that
+ * budget: a missed email is recoverable, a deleted subscription is not.
+ */
+const SEND_TIMEOUT_MS = 2500;
+
 function cooldownElapsed(lastNotifiedAt: Date | null): boolean {
   if (!lastNotifiedAt) {
     return true;
@@ -43,6 +51,7 @@ async function sendEmail(
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
@@ -74,6 +83,7 @@ async function sendSlack(subject: string, lines: string[]): Promise<void> {
 
   const response = await fetch(webhookUrl, {
     method: "POST",
+    signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       text: [`*${subject}*`, ...lines.map((line) => `• ${line}`)].join("\n"),
