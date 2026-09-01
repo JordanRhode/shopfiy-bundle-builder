@@ -107,7 +107,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       })),
     });
   } else {
-    await updateBundle(id!, session.shop, {
+    const updated = await updateBundle(id!, session.shop, {
       title,
       allowMultiples,
       variantMaps: variantMaps.map((vm: any) => ({
@@ -124,6 +124,10 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         active: opt.active !== false,
       })),
     });
+
+    if (!updated) {
+      throw new Response("Bundle not found", { status: 404 });
+    }
   }
 
   return redirect("/app");

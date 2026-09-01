@@ -111,6 +111,15 @@ export async function updateBundle(
   data: UpdateBundleInput
 ) {
   return prisma.$transaction(async (tx) => {
+    // Confirm the bundle belongs to this shop before touching any of its rows
+    const owned = await tx.bundle.findFirst({
+      where: { id, shopDomain },
+      select: { id: true },
+    });
+    if (!owned) {
+      return null;
+    }
+
     // Delete old variant maps and options if new ones are provided
     if (data.variantMaps) {
       await tx.bundleVariantMap.deleteMany({ where: { bundleId: id } });
@@ -120,7 +129,7 @@ export async function updateBundle(
     }
 
     return tx.bundle.update({
-      where: { id },
+      where: { id, shopDomain },
       data: {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.allowMultiples !== undefined && {
