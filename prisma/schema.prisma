@@ -8,19 +8,19 @@ datasource db {
 }
 
 model Session {
-  id            String    @id
-  shop          String
-  state         String
-  isOnline      Boolean   @default(false)
-  scope         String?
-  expires       DateTime?
-  accessToken   String
-  userId        BigInt?
-  firstName     String?
-  lastName      String?
-  email         String?
-  accountOwner  Boolean   @default(false)
-  locale        String?
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
   collaborator        Boolean?  @default(false)
   emailVerified       Boolean?  @default(false)
   refreshToken        String?
@@ -28,17 +28,17 @@ model Session {
 }
 
 model Bundle {
-  id               String             @id @default(cuid())
+  id               String   @id @default(cuid())
   shopDomain       String
   shopifyProductId String
   title            String
-  allowMultiples   Boolean            @default(true)
-  active           Boolean            @default(true)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  allowMultiples   Boolean  @default(true)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  variantMaps      BundleVariantMap[]
-  options          BundleOption[]
+  variantMaps BundleVariantMap[]
+  options     BundleOption[]
 
   @@unique([shopDomain, shopifyProductId])
   @@index([shopDomain])
@@ -51,24 +51,96 @@ model BundleVariantMap {
   variantTitle     String
   selectionCount   Int
 
-  bundle           Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  bundle Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
 
   @@unique([bundleId, shopifyVariantId])
 }
 
 model BundleOption {
-  id        String   @id @default(cuid())
-  bundleId  String
+  id          String   @id @default(cuid())
+  bundleId    String
   name        String
   description String?
   imageUrl    String?
   inStock     Boolean  @default(true)
-  sortOrder Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  bundle    Bundle   @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  bundle Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
 
   @@index([bundleId, active])
+}
+
+model PackagingType {
+  id             String    @id @default(cuid())
+  shopDomain     String
+  name           String
+  sku            String?
+  onHand         Int       @default(0)
+  lowThreshold   Int       @default(0)
+  notifyEmails   String?
+  lastNotifiedAt DateTime?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  assignments PackagingAssignment[]
+  ledger      PackagingLedgerEntry[]
+
+  @@unique([shopDomain, name])
+  @@index([shopDomain])
+}
+
+model PackagingAssignment {
+  id               String   @id @default(cuid())
+  packagingTypeId  String
+  shopDomain       String
+  shopifyProductId String
+  // "*" means every variant of the product. A literal id overrides the wildcard
+  // for that variant. Never null: Postgres treats NULLs as distinct, which would
+  // let duplicate rows slip past the unique constraint below.
+  shopifyVariantId String   @default("*")
+  productTitle     String?
+  variantTitle     String?
+  unitsPerItem     Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  packagingType PackagingType @relation(fields: [packagingTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([packagingTypeId, shopifyProductId, shopifyVariantId])
+  @@index([shopDomain, shopifyProductId])
+}
+
+model PackagingLedgerEntry {
+  id              String   @id @default(cuid())
+  packagingTypeId String
+  shopDomain      String
+  // Negative when packaging is consumed, positive when it comes back.
+  delta           Int
+  reason          String
+  // Shopify order id, refund id, or "manual:<uuid>". Never null so the unique
+  // constraint below actually fires on duplicate webhook deliveries.
+  sourceId        String
+  shopifyOrderId  String?
+  note            String?
+  createdAt       DateTime @default(now())
+
+  packagingType PackagingType @relation(fields: [packagingTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([packagingTypeId, reason, sourceId])
+  @@index([shopDomain, createdAt])
+  @@index([shopifyOrderId])
+}
+
+/// Tracks install state per shop so uninstalling can be recorded without
+/// destroying the merchant's data. Reinstalling clears uninstalledAt and the
+/// shop picks up exactly where it left off.
+model Shop {
+  shopDomain    String    @id
+  installedAt   DateTime  @default(now())
+  uninstalledAt DateTime?
+  updatedAt     DateTime  @updatedAt
 }

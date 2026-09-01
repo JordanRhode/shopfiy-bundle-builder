@@ -6,6 +6,7 @@ import {
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
+import { markInstalled } from "./models/Shop.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -16,6 +17,18 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.SingleMerchant,
+  hooks: {
+    // Clears any previous uninstall marker so a reinstall resumes with the
+    // shop's existing bundles and packaging counts. Never allowed to break
+    // authentication: bookkeeping failing is not a reason to block a login.
+    afterAuth: async ({ session }) => {
+      try {
+        await markInstalled(session.shop);
+      } catch (error) {
+        console.error("[shop] Failed to record install state:", error);
+      }
+    },
+  },
   future: {
     unstable_newEmbeddedAuthStrategy: true,
   },
