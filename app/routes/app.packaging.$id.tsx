@@ -7,6 +7,7 @@ import {
   updatePackagingType,
   type AssignmentInput,
 } from "../models/Packaging.server";
+import { sendTestAlert, describeOutcome, alertDelivered } from "../services/packagingNotifications.server";
 import PackagingForm from "../components/PackagingForm";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 
@@ -51,6 +52,27 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const { id } = params;
   const formData = await request.formData();
+
+  // Verifies alert configuration without waiting for stock to actually run low.
+  if (formData.get("intent") === "test-alert") {
+    if (id === "new") {
+      return json(
+        { notice: { tone: "warning", message: "Save this packaging type first." } },
+        { status: 400 }
+      );
+    }
+
+    const outcome = await sendTestAlert(session.shop, id!);
+    if (!outcome) {
+      throw new Response("Packaging type not found", { status: 404 });
+    }
+
+    return json({
+      notice: alertDelivered(outcome)
+        ? { tone: "success", message: `Test alert sent. ${describeOutcome(outcome)}` }
+        : { tone: "critical", message: `No alert was delivered. ${describeOutcome(outcome)}` },
+    });
+  }
 
   const name = formData.get("name") as string;
   const sku = (formData.get("sku") as string)?.trim();
@@ -144,6 +166,7 @@ export default function PackagingDetailPage() {
     <PackagingForm
       packagingType={packagingType ?? undefined}
       errors={actionData && "errors" in actionData ? actionData.errors : undefined}
+      notice={actionData && "notice" in actionData ? actionData.notice : undefined}
     />
   );
 }

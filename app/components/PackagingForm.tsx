@@ -50,11 +50,13 @@ interface PackagingFormProps {
     ledger: LedgerEntryData[];
   };
   errors?: Record<string, string>;
+  notice?: { tone: string; message: string };
 }
 
 export default function PackagingForm({
   packagingType,
   errors,
+  notice,
 }: PackagingFormProps) {
   const navigate = useNavigate();
   const navigation = useNavigation();
@@ -172,6 +174,7 @@ export default function PackagingForm({
 
   const handleSubmit = useCallback(() => {
     const formData = new FormData();
+    formData.set("intent", "save");
     formData.set("name", name);
     formData.set("sku", sku);
     formData.set("onHand", onHand);
@@ -191,6 +194,10 @@ export default function PackagingForm({
     submit,
   ]);
 
+  const handleTestAlert = useCallback(() => {
+    submit({ intent: "test-alert" }, { method: "post" });
+  }, [submit]);
+
   return (
     <Page
       title={isEditing ? packagingType.name : "Add packaging type"}
@@ -205,6 +212,14 @@ export default function PackagingForm({
         {errors?.form && (
           <Layout.Section>
             <Banner tone="critical">{errors.form}</Banner>
+          </Layout.Section>
+        )}
+
+        {notice && (
+          <Layout.Section>
+            <Banner tone={notice.tone as "success" | "critical" | "warning"}>
+              {notice.message}
+            </Banner>
           </Layout.Section>
         )}
 
@@ -265,6 +280,9 @@ export default function PackagingForm({
                   autoComplete="off"
                   helpText="Comma-separated. Leave blank to rely on the in-app banner and Slack."
                 />
+                {isEditing && (
+                  <Button onClick={handleTestAlert}>Send test alert</Button>
+                )}
                 <Checkbox
                   label="Active"
                   checked={active}

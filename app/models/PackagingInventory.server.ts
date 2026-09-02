@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import prisma from "../db.server";
 import { LedgerReason } from "./Packaging.server";
 
@@ -128,39 +129,95 @@ export async function resolvePackagingUsage(
   return computeUsage(lineItems, assignments);
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { code?: string }).code === "P2002"
-  );
+/**
+ * Two 32-bit keys for pg_advisory_xact_lock, derived from a string.
+ * A collision would only make two unrelated orders take turns, which is
+ * harmless.
+ */
+function advisoryLockKeys(value: string): [number, number] {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x9e3779b9;
+  for (let i = 0; i < value.length; i++) {
+    const c = value.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193);
+    h2 = Math.imul(h2 ^ c, 0x85ebca6b);
+  }
+  return [h1 | 0, h2 | 0];
+}
+
+async function computeOutstanding(
+  client: Prisma.TransactionClient,
+  shopDomain: string,
+  shopifyOrderId: string
+): Promise<Map<string, number>> {
+  const grouped = await client.packagingLedgerEntry.groupBy({
+    by: ["packagingTypeId"],
+    where: { shopDomain, shopifyOrderId },
+    _sum: { delta: true },
+  });
+
+  const outstanding = new Map<string, number>();
+  for (const row of grouped) {
+    const net = -(row._sum.delta ?? 0);
+    if (net > 0) {
+      outstanding.set(row.packagingTypeId, net);
+    }
+  }
+  return outstanding;
 }
 
 /**
- * Apply ledger entries and move the cached counts.
+ * Serialize every packaging mutation for one order, then apply the planned
+ * deltas atomically.
  *
- * Each entry is its own transaction so one duplicate does not roll back the
- * rest of the order. The unique index on (packagingTypeId, reason, sourceId)
- * is what makes redelivered webhooks safe: the second attempt hits P2002 and
- * is skipped rather than double-counted.
+ * The lock is what makes cancellation safe. Cancelling an order that carried a
+ * refund makes Shopify fire refunds/create and orders/cancelled at the same
+ * moment; without serialization both read the same outstanding balance before
+ * either writes, and each restocks the full amount. Capping alone does not
+ * help, because both see the uncapped balance.
+ *
+ * `plan` receives the outstanding balance read inside the lock, so restocks can
+ * cap against a value that cannot change underneath them.
  */
-async function applyDeltas(
+async function applyOrderDeltas(
   shopDomain: string,
-  deltas: PendingDelta[],
+  shopifyOrderId: string,
   reason: string,
   sourceId: string,
-  shopifyOrderId: string | null,
-  note?: string
+  note: string | undefined,
+  plan: (outstanding: Map<string, number>) => PendingDelta[]
 ): Promise<string[]> {
-  const applied: string[] = [];
+  const [key1, key2] = advisoryLockKeys(`${shopDomain}:${shopifyOrderId}`);
 
-  for (const { packagingTypeId, delta } of deltas) {
-    if (delta === 0) {
-      continue;
-    }
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${key1}::int4, ${key2}::int4)`;
 
-    try {
-      await prisma.$transaction(async (tx) => {
+      const outstanding = await computeOutstanding(tx, shopDomain, shopifyOrderId);
+      const applied: string[] = [];
+
+      for (const { packagingTypeId, delta } of plan(outstanding)) {
+        if (delta === 0) {
+          continue;
+        }
+
+        // Checked rather than caught: a unique violation inside an interactive
+        // transaction aborts the whole transaction, so the P2002 could not be
+        // swallowed here. Holding the advisory lock means no concurrent writer
+        // can slip in between this check and the insert. The unique index
+        // stays as a backstop.
+        const existing = await tx.packagingLedgerEntry.findFirst({
+          where: { packagingTypeId, reason, sourceId },
+          select: { id: true },
+        });
+
+        if (existing) {
+          console.log(
+            `[packaging] Skipping duplicate ${reason} ${sourceId} for type ${packagingTypeId}`
+          );
+          continue;
+        }
+
         await tx.packagingLedgerEntry.create({
           data: {
             packagingTypeId,
@@ -177,21 +234,16 @@ async function applyDeltas(
           where: { id: packagingTypeId },
           data: { onHand: { increment: delta } },
         });
-      });
 
-      applied.push(packagingTypeId);
-    } catch (error) {
-      if (isUniqueViolation(error)) {
-        console.log(
-          `[packaging] Skipping duplicate ${reason} ${sourceId} for type ${packagingTypeId}`
-        );
-        continue;
+        applied.push(packagingTypeId);
       }
-      throw error;
-    }
-  }
 
-  return applied;
+      return applied;
+    },
+    // Generous enough to absorb waiting behind a sibling webhook. Overrunning
+    // Shopify's 5s budget just means a retry, which is idempotent.
+    { timeout: 15_000, maxWait: 10_000 }
+  );
 }
 
 /**
@@ -205,21 +257,7 @@ export async function outstandingForOrder(
   shopDomain: string,
   shopifyOrderId: string
 ): Promise<Map<string, number>> {
-  const grouped = await prisma.packagingLedgerEntry.groupBy({
-    by: ["packagingTypeId"],
-    where: { shopDomain, shopifyOrderId },
-    _sum: { delta: true },
-  });
-
-  const outstanding = new Map<string, number>();
-  for (const row of grouped) {
-    const net = -(row._sum.delta ?? 0);
-    if (net > 0) {
-      outstanding.set(row.packagingTypeId, net);
-    }
-  }
-
-  return outstanding;
+  return computeOutstanding(prisma, shopDomain, shopifyOrderId);
 }
 
 /** Deduct packaging for a paid order. Safe to call more than once. */
@@ -238,18 +276,17 @@ export async function deductForOrder(
     return [];
   }
 
-  const deltas = [...usage].map(([packagingTypeId, units]) => ({
-    packagingTypeId,
-    delta: -units,
-  }));
-
-  return applyDeltas(
+  return applyOrderDeltas(
     shopDomain,
-    deltas,
+    orderId,
     LedgerReason.ORDER,
     orderId,
-    orderId,
-    `Order ${order.order_number ?? orderId}`
+    `Order ${order.order_number ?? orderId}`,
+    () =>
+      [...usage].map(([packagingTypeId, units]) => ({
+        packagingTypeId,
+        delta: -units,
+      }))
   );
 }
 
@@ -298,23 +335,22 @@ export async function restockForRefund(
     return [];
   }
 
-  const outstanding = await outstandingForOrder(shopDomain, orderId);
-
-  const deltas: PendingDelta[] = [];
-  for (const [packagingTypeId, units] of usage) {
-    const capped = Math.min(units, outstanding.get(packagingTypeId) ?? 0);
-    if (capped > 0) {
-      deltas.push({ packagingTypeId, delta: capped });
-    }
-  }
-
-  return applyDeltas(
+  return applyOrderDeltas(
     shopDomain,
-    deltas,
+    orderId,
     LedgerReason.REFUND,
     refundId,
-    orderId,
-    `Refund ${refundId}`
+    `Refund ${refundId}`,
+    (outstanding) => {
+      const deltas: PendingDelta[] = [];
+      for (const [packagingTypeId, units] of usage) {
+        const capped = Math.min(units, outstanding.get(packagingTypeId) ?? 0);
+        if (capped > 0) {
+          deltas.push({ packagingTypeId, delta: capped });
+        }
+      }
+      return deltas;
+    }
   );
 }
 
@@ -329,23 +365,19 @@ export async function restockForCancellation(
   order: { id: number | string }
 ): Promise<string[]> {
   const orderId = String(order.id);
-  const outstanding = await outstandingForOrder(shopDomain, orderId);
 
-  if (outstanding.size === 0) {
-    return [];
-  }
-
-  const deltas = [...outstanding].map(([packagingTypeId, units]) => ({
-    packagingTypeId,
-    delta: units,
-  }));
-
-  return applyDeltas(
+  return applyOrderDeltas(
     shopDomain,
-    deltas,
+    orderId,
     LedgerReason.CANCEL,
     orderId,
-    orderId,
-    `Order ${orderId} cancelled`
+    `Order ${orderId} cancelled`,
+    // Driven entirely off the balance read inside the lock, so a cancellation
+    // that follows a refund returns only what is left.
+    (outstanding) =>
+      [...outstanding].map(([packagingTypeId, units]) => ({
+        packagingTypeId,
+        delta: units,
+      }))
   );
 }

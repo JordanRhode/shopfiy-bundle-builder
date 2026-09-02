@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 import prisma from "../db.server";
 import { createPackagingType, adjustOnHand } from "./Packaging.server";
 import {
@@ -224,6 +224,20 @@ describe("assignment resolution", () => {
 });
 
 describe("low stock alerting", () => {
+  // The cooldown only starts once a channel actually delivers, so these tests
+  // need one configured.
+  beforeEach(() => {
+    process.env.SLACK_WEBHOOK_URL = "https://hooks.slack.test/x";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("ok", { status: 200 })
+    );
+  });
+
+  afterEach(() => {
+    delete process.env.SLACK_WEBHOOK_URL;
+    vi.restoreAllMocks();
+  });
+
   it("alerts once, then respects the cooldown, then resets on recovery", async () => {
     const box = await seedBox({ onHand: 6, lowThreshold: 5 });
 
@@ -282,5 +296,69 @@ describe("manual adjustment", () => {
     const result = await adjustOnHand(box.id, "attacker.myshopify.com", -10);
     expect(result).toBeNull();
     expect(await onHandOf(box.id)).toBe(10);
+  });
+});
+
+describe("concurrent webhook delivery", () => {
+  // A single concurrent run passes even against the racy implementation - the
+  // very first one happens to serialize. Repeating is what makes this a real
+  // regression test: before the advisory lock, this failed on ~39 of 40 runs.
+  const RUNS = 12;
+
+  it("does not double-restock when refund and cancel arrive together", async () => {
+    for (let i = 0; i < RUNS; i++) {
+      const orderId = 7000 + i;
+      await prisma.packagingType.deleteMany({ where: { shopDomain: SHOP } });
+      const box = await seedBox();
+
+      await deductForOrder(SHOP, order(orderId, 3));
+
+      // Cancelling an order that carried a refund makes Shopify fire
+      // refunds/create and orders/cancelled at essentially the same moment.
+      await Promise.all([
+        restockForRefund(SHOP, refund(orderId * 10, orderId, 3)),
+        restockForCancellation(SHOP, { id: orderId }),
+      ]);
+
+      expect(await onHandOf(box.id), `run ${i}`).toBe(20);
+      await expectReconciled(box.id);
+    }
+  });
+
+  it("deducts once when the same paid order is delivered twice at once", async () => {
+    for (let i = 0; i < RUNS; i++) {
+      const orderId = 8000 + i;
+      await prisma.packagingType.deleteMany({ where: { shopDomain: SHOP } });
+      const box = await seedBox();
+
+      await Promise.all([
+        deductForOrder(SHOP, order(orderId, 3)),
+        deductForOrder(SHOP, order(orderId, 3)),
+      ]);
+
+      expect(await onHandOf(box.id), `run ${i}`).toBe(17);
+      expect(
+        await prisma.packagingLedgerEntry.count({
+          where: { packagingTypeId: box.id, reason: "ORDER" },
+        })
+      ).toBe(1);
+    }
+  });
+
+  it("restocks once when the same refund is delivered twice at once", async () => {
+    for (let i = 0; i < RUNS; i++) {
+      const orderId = 9000 + i;
+      await prisma.packagingType.deleteMany({ where: { shopDomain: SHOP } });
+      const box = await seedBox();
+
+      await deductForOrder(SHOP, order(orderId, 3));
+      await Promise.all([
+        restockForRefund(SHOP, refund(orderId * 10, orderId, 2)),
+        restockForRefund(SHOP, refund(orderId * 10, orderId, 2)),
+      ]);
+
+      expect(await onHandOf(box.id), `run ${i}`).toBe(19);
+      await expectReconciled(box.id);
+    }
   });
 });
